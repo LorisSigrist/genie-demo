@@ -1,3 +1,13 @@
+export const SVG_NS = "http://www.w3.org/2000/svg";
+
+/**
+ * Generate a random String that can be used as an id.
+ * @returns
+ */
+export function ID() {
+  return Math.random().toString(36).slice(2);
+}
+
 /**
  * Get an element by its id and assert its type.
  *
@@ -15,16 +25,6 @@ export function getElementById(id, prototype) {
     `Element with id ${id} is not an instance of ${prototype.name}`
   );
 }
-
-/**
- * Generate a random String that can be used as an id.
- * @returns
- */
-export function ID() {
-  return Math.random().toString(36).slice(2);
-}
-
-export const SVG_NS = "http://www.w3.org/2000/svg";
 
 /**
  * Creates a new Canvas element with the dimensions and content of the given ImageData.

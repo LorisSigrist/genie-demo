@@ -17,7 +17,9 @@ export const genieExit = (element, target, options) => {
   const elementBounds = element.getBoundingClientRect();
   const targetBounds = target.getBoundingClientRect();
 
+  //We will need two containers, one for positioning & clipping, and one for applying the filter
   const container = document.createElement("div");
+  const filterContainer = document.createElement("div");
 
   container.style.position = "absolute";
   container.style.top = targetBounds.bottom + window.scrollY + "px";
@@ -29,7 +31,8 @@ export const genieExit = (element, target, options) => {
   container.style.bottom =
     window.innerHeight - window.scrollY - elementBounds.bottom + "px";
   container.style.pointerEvents = "none";
-    container.style.zIndex = "1000";
+  container.style.zIndex = "1000";
+  container.style.overflow = "hidden"
 
   element.style.position = "absolute";
   element.style.bottom = "0";
@@ -38,8 +41,13 @@ export const genieExit = (element, target, options) => {
   //Add the element to the container
   document.body.appendChild(container);
 
+  filterContainer.style.width = "100%";
+  filterContainer.style.height = "100%";
+
+  container.appendChild(filterContainer);
+
   //step 2 - Move the element to the container
-  container.appendChild(element);
+  filterContainer.appendChild(element);
 
   const containerDimensions = container.getBoundingClientRect();
   const contentDimensions = element.getBoundingClientRect();
@@ -178,7 +186,7 @@ export const genieExit = (element, target, options) => {
   svg.style.opacity = "0";
 
   //apply the filter to the container
-  container.style.filter = `url(#${filterId})`;
+  filterContainer.style.filter = `url(#${filterId})`;
 
   //Use the webAnimations API to animate the content's bottom property from zero to 100%
   const animation = element.animate(
