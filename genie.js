@@ -52,7 +52,6 @@ export const genieExit = (element, target, options) => {
   element.style.bottom = "0";
   element.style.left = elementBounds.left - bb.left + "px";
 
-
   //step 2 - Move the element to the container
   filterContainer.appendChild(element);
   container.appendChild(filterContainer);
@@ -61,31 +60,23 @@ export const genieExit = (element, target, options) => {
   const containerDimensions = container.getBoundingClientRect();
   const contentDimensions = element.getBoundingClientRect();
 
-  /**
-   * The distance from the top of the container to the top of the content
-   */
-  const y0 = contentDimensions.y - containerDimensions.y;
+  const contentTop = contentDimensions.y - containerDimensions.y;
+  const contentTopLeft = contentDimensions.x - containerDimensions.x;
+  const contentTopRight = contentDimensions.width + contentDimensions.x - containerDimensions.x;
 
-  /**
-   * The distance from the left of the container to the left of the content
-   */
-  const x1 = contentDimensions.width;
-
-  const depthMap = new ImageData(
-    containerDimensions.width,
-    containerDimensions.height
-  );
+  const depthMap = new ImageData(bb.width, bb.height);
 
   //These functions define the left and right edges of the content (x position) as a function of y in the range [0, y0]
   const getLeft = createQuadratic(
-    0,
-    y0,
+    contentTopLeft,
+    contentTop,
     targetLeft.x - containerDimensions.x,
     0
   );
+
   const getRight = createQuadratic(
-    x1,
-    y0,
+    contentTopRight,
+    contentTop,
     targetRight.x - containerDimensions.x,
     0
   );
@@ -111,14 +102,15 @@ export const genieExit = (element, target, options) => {
   const displacementScale =
     Math.max(maxDisplacementRight, maxDisplacementLeft) * 1.15;
 
-  for (let y = 0; y < y0; y++) {
+  for (let y = 0; y < contentTop; y++) {
     const left = getLeft(y);
     const right = getRight(y);
     const getPercentage = createLinear(0, left, 1, right);
 
     for (let x = 0; x < depthMap.width; x++) {
-      const offset = x - getPercentage(x) * contentDimensions.width;
-      const val = (offset / displacementScale) * 255 + zeroValue;
+      const percentage = getPercentage(x);
+      const offsetPx = x - percentage * contentDimensions.width;
+      const val = ((offsetPx / displacementScale) * 255) + zeroValue;
 
       const index = (y * depthMap.width + x) * 4;
       depthMap.data[index] = val;
@@ -129,7 +121,7 @@ export const genieExit = (element, target, options) => {
   }
 
   //Fill the rest of the image with black
-  for (let y = y0; y < depthMap.height; y++) {
+  for (let y = contentTop; y < depthMap.height; y++) {
     for (let x = 0; x < depthMap.width; x++) {
       const index = (y * depthMap.width + x) * 4;
       depthMap.data[index] = zeroValue;
@@ -144,6 +136,7 @@ export const genieExit = (element, target, options) => {
   //create temporary canvas to generate data URL
   const newCanvas = getCanvasFromImageData(depthMap);
 
+  if (options.debug) document.body.appendChild(newCanvas);
 
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("width", depthMap.width.toString());
@@ -169,7 +162,6 @@ export const genieExit = (element, target, options) => {
   feColorMatrix.setAttribute("in", feImage.getAttribute("result") ?? "");
   feColorMatrix.setAttribute("type", "matrix");
   feColorMatrix.setAttribute("color-interpolation-filters", "sRGB");
-  
 
   const zeroPoint = zeroValue / 255;
 
@@ -178,9 +170,6 @@ export const genieExit = (element, target, options) => {
   const slope = zeroPoint <= 0.5 ? 0.5 / (1 - zeroPoint) : 0.5 / zeroPoint;
   const intercept = 0.5 - zeroPoint * slope;
 
-
-  //Remap the R channel from 0-1 to 0.5-1
-  //Set the B channel to exactly 0.5
   feColorMatrix.setAttribute(
     "values",
     `${slope} 0 0 0 ${intercept}
@@ -193,8 +182,11 @@ export const genieExit = (element, target, options) => {
     console.log("Slope: ", slope);
     console.log("Intercept: ", intercept);
     console.log("Matrix", feColorMatrix.getAttribute("values"));
+    console.log("Zero value", zeroValue);
     console.log("Zero point", zeroPoint);
-    console.log(zeroPoint * slope + intercept);
+    console.log("Max displacement right", maxDisplacementRight);
+    console.log("Max displacement left", maxDisplacementLeft);
+    console.log(containerDimensions);
   }
 
   feColorMatrix.setAttribute("result", ID());
