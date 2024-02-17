@@ -25,7 +25,6 @@ export const genieExit = (element, target, options) => {
   const elementRight = new DOMPoint(elementBounds.right, elementBounds.bottom);
   
   const bb = generateBoundingBox(targetLeft, targetRight, elementLeft, elementRight);
-  console.log(bb);
 
   //We will need two containers, one for positioning & clipping, and one for applying the filter
   const container = document.createElement("div");
@@ -34,22 +33,20 @@ export const genieExit = (element, target, options) => {
   container.style.position = "absolute";
   container.style.top = bb.top + window.scrollY + "px";
   container.style.left = bb.left + "px";
-  container.style.right = window.innerWidth - bb.right + "px";
-  container.style.bottom =
-    window.innerHeight - window.scrollY - bb.bottom + "px";
+  container.style.width = bb.width + "px";
+  container.style.height = bb.height + "px";
   container.style.pointerEvents = "none";
   container.style.zIndex = "1000";
   container.style.overflow = "hidden"; //Needed to clip the content
   
-  if (options.debug) container.style.border = "1px solid red";
+  if (options.debug) container.style.outline = "1px solid red";
  
-
-  filterContainer.style.width = "100%";
+  filterContainer.style.inset = "100%";
   filterContainer.style.height = "100%";
 
   element.style.position = "absolute";
   element.style.bottom = "0";
-  element.style.left = "0";
+  element.style.left = elementBounds.left - bb.left + "px";
 
   //step 2 - Move the element to the container
   filterContainer.appendChild(element);
@@ -58,7 +55,6 @@ export const genieExit = (element, target, options) => {
 
   const containerDimensions = container.getBoundingClientRect();
   const contentDimensions = element.getBoundingClientRect();
-  const targetDimensions = target.getBoundingClientRect();
 
   /**
    * The distance from the top of the container to the top of the content
@@ -68,7 +64,7 @@ export const genieExit = (element, target, options) => {
   /**
    * The left edge of the exit window
    */
-  const x0 = containerDimensions.width - targetDimensions.width;
+  const x0 = targetLeft.x -  containerDimensions.x;
 
   /**
    * The distance from the left of the container to the left of the content
@@ -81,8 +77,8 @@ export const genieExit = (element, target, options) => {
   );
 
   //These functions define the left and right edges of the content (x position) as a function of y in the range [0, y0]
-  const getLeft = createQuadratic(0, y0, x0, 0);
-  const getRight = createQuadratic(x1, y0, containerDimensions.width, 0);
+  const getLeft = createQuadratic(0, y0, targetLeft.x -  containerDimensions.x, 0);
+  const getRight = createQuadratic(x1, y0, targetRight.x -  containerDimensions.x, 0);
 
   /**
    * We are limited by numerical precision, so we need to find the minimum scale factor
@@ -90,7 +86,7 @@ export const genieExit = (element, target, options) => {
    *
    * We also add 20% extra for safety
    */
-  const maxDisplacement = Math.max(x0, containerDimensions.width - x1) * 1.2;
+  const displacementScale = Math.max(x0, containerDimensions.width - x1) * 1.2;
 
   for (let y = 0; y < y0; y++) {
     const left = getLeft(y);
@@ -99,7 +95,7 @@ export const genieExit = (element, target, options) => {
 
     for (let x = 0; x < depthMap.width; x++) {
       const offset = x - getPercentage(x) * contentDimensions.width;
-      const val = (offset / maxDisplacement) * 255;
+      const val = (offset / displacementScale) * 255;
 
       const index = (y * depthMap.width + x) * 4;
       depthMap.data[index] = val;
@@ -140,7 +136,7 @@ export const genieExit = (element, target, options) => {
   feImage.setAttribute("y", "0");
   feImage.setAttribute("width", depthMap.width + "px");
   feImage.setAttribute("height", depthMap.height + "px");
-  feImage.setAttribute("result", "image-raw");
+  feImage.setAttribute("result", ID());
 
   // Since the image is from a canvas, which use sRGB color space,
   // we need to set  the color - interpolation - filters to sRGB on all the filter elements
@@ -149,7 +145,7 @@ export const genieExit = (element, target, options) => {
   feImage.href.baseVal = newCanvas.toDataURL();
 
   const feColorMatrix = document.createElementNS(SVG_NS, "feColorMatrix");
-  feColorMatrix.setAttribute("in", "image-raw");
+  feColorMatrix.setAttribute("in", feImage.getAttribute("result") ?? "");
   feColorMatrix.setAttribute("type", "matrix");
   feColorMatrix.setAttribute("color-interpolation-filters", "sRGB");
 
@@ -159,7 +155,7 @@ export const genieExit = (element, target, options) => {
     "values",
     "0.5 0 0 0 0.5 0 0 0 0 0 0 0 0 0 0.5 0 0 0 1 0"
   );
-  feColorMatrix.setAttribute("result", "image");
+  feColorMatrix.setAttribute("result", ID());
 
   //Displacement map
   const feDisplacementMap = document.createElementNS(
@@ -167,10 +163,10 @@ export const genieExit = (element, target, options) => {
     "feDisplacementMap"
   );
   feDisplacementMap.setAttribute("in", "SourceGraphic");
-  feDisplacementMap.setAttribute("in2", "image");
+  feDisplacementMap.setAttribute("in2", feColorMatrix.getAttribute("result") ?? "");
 
   //Because the displacement is calculated as (Sample(x) * scale), where Sample(x) is between -0.5 and 0.5, we need the scale to be twice the maximum displacement
-  feDisplacementMap.setAttribute("scale", String(-maxDisplacement * 2));
+  feDisplacementMap.setAttribute("scale", String(-displacementScale * 2));
 
   //set color space to linearRGB
   feDisplacementMap.setAttribute("color-interpolation-filters", "sRGB");
@@ -191,6 +187,8 @@ export const genieExit = (element, target, options) => {
   svg.style.left = "-100%";
   svg.style.pointerEvents = "none";
   svg.style.opacity = "0";
+
+  console.log(svg);
 
   //apply the filter to the container
   filterContainer.style.filter = `url(#${filterId})`;
