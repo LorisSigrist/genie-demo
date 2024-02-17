@@ -52,6 +52,7 @@ export const genieExit = (element, target, options) => {
   element.style.bottom = "0";
   element.style.left = elementBounds.left - bb.left + "px";
 
+
   //step 2 - Move the element to the container
   filterContainer.appendChild(element);
   container.appendChild(filterContainer);
@@ -64,11 +65,6 @@ export const genieExit = (element, target, options) => {
    * The distance from the top of the container to the top of the content
    */
   const y0 = contentDimensions.y - containerDimensions.y;
-
-  /**
-   * The left edge of the exit window
-   */
-  const x0 = targetLeft.x - containerDimensions.x;
 
   /**
    * The distance from the left of the container to the left of the content
@@ -99,7 +95,9 @@ export const genieExit = (element, target, options) => {
   const maxDisplacementLeft =
     containerDimensions.width - targetRight.x + containerDimensions.x;
 
-  //Which value in the displacement map corresponds to zero displacement
+  /**
+   * Which brighness value in the displacement map corresponds to zero displacement
+   */
   const zeroValue = Math.round(
     (maxDisplacementLeft / (maxDisplacementRight + maxDisplacementLeft)) * 255
   );
@@ -108,10 +106,10 @@ export const genieExit = (element, target, options) => {
    * We are limited by numerical precision, so we need to find the minimum scale factor
    * We do that by finding the maximum displacement we need to apply anywhere in the image
    *
-   * We also add 20% extra for safety
+   * We also add 15% extra for safety
    */
   const displacementScale =
-    Math.max(maxDisplacementRight, maxDisplacementLeft) * 1.2;
+    Math.max(maxDisplacementRight, maxDisplacementLeft) * 1.15;
 
   for (let y = 0; y < y0; y++) {
     const left = getLeft(y);
@@ -120,7 +118,7 @@ export const genieExit = (element, target, options) => {
 
     for (let x = 0; x < depthMap.width; x++) {
       const offset = x - getPercentage(x) * contentDimensions.width;
-      const val = (offset / displacementScale) * 255;
+      const val = (offset / displacementScale) * 255 + zeroValue;
 
       const index = (y * depthMap.width + x) * 4;
       depthMap.data[index] = val;
@@ -134,7 +132,7 @@ export const genieExit = (element, target, options) => {
   for (let y = y0; y < depthMap.height; y++) {
     for (let x = 0; x < depthMap.width; x++) {
       const index = (y * depthMap.width + x) * 4;
-      depthMap.data[index] = 0;
+      depthMap.data[index] = zeroValue;
       depthMap.data[index + 1] = 0;
       depthMap.data[index + 2] = 0;
       depthMap.data[index + 3] = 255;
@@ -146,8 +144,6 @@ export const genieExit = (element, target, options) => {
   //create temporary canvas to generate data URL
   const newCanvas = getCanvasFromImageData(depthMap);
 
-  // (optional) add the canvas to the body to see the generated depth map
-  document.body.appendChild(newCanvas);
 
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("width", depthMap.width.toString());
@@ -173,9 +169,15 @@ export const genieExit = (element, target, options) => {
   feColorMatrix.setAttribute("in", feImage.getAttribute("result") ?? "");
   feColorMatrix.setAttribute("type", "matrix");
   feColorMatrix.setAttribute("color-interpolation-filters", "sRGB");
+  
 
-  const slope = createLinear(1, 0, 0.5, 127.5)(Math.abs(127.5 - zeroValue));
-  const intercept = 0.5 - slope * zeroValue;
+  const zeroPoint = zeroValue / 255;
+
+  //the zeroPoint should result in a value of 0.5 exactly
+  //All values in the range [0, 1] should be contained in the range [0, 1]
+  const slope = zeroPoint <= 0.5 ? 0.5 / (1 - zeroPoint) : 0.5 / zeroPoint;
+  const intercept = 0.5 - zeroPoint * slope;
+
 
   //Remap the R channel from 0-1 to 0.5-1
   //Set the B channel to exactly 0.5
@@ -187,6 +189,13 @@ export const genieExit = (element, target, options) => {
      0 0 0 1 0`
   );
 
+  if (options.debug) {
+    console.log("Slope: ", slope);
+    console.log("Intercept: ", intercept);
+    console.log("Matrix", feColorMatrix.getAttribute("values"));
+    console.log("Zero point", zeroPoint);
+    console.log(zeroPoint * slope + intercept);
+  }
 
   feColorMatrix.setAttribute("result", ID());
 
@@ -221,9 +230,9 @@ export const genieExit = (element, target, options) => {
   svg.style.position = "fixed";
   svg.style.top = "-100%";
   svg.style.left = "-100%";
+  svg.style.zIndex = "-1000000";
   svg.style.pointerEvents = "none";
   svg.style.opacity = "0";
-  svg.style.zIndex = "-1000000";
 
   //apply the filter to the container
   filterContainer.style.filter = `url(#${filterId})`;
