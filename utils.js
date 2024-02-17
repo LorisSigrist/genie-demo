@@ -72,3 +72,22 @@ export function createLinear(x0, y0, x1, y1) {
 export function createQuadratic(x0, y0, x1, y1) {
   return (y) => x0 + Math.pow((y - y0) / (y1 - y0), 2) * (x1 - x0);
 }
+
+
+/**
+ * Generates the smallest bounding box that contains all the given points.
+ * 
+ * @param {DOMPoint[]} points 
+ * @returns {DOMRect}
+ */
+export function generateBoundingBox(...points) {
+  const left = Math.min(...points.map(pt => pt.x));
+  const top = Math.min(...points.map(pt => pt.y));
+  const right = Math.max(...points.map(pt => pt.x));
+  const bottom = Math.max(...points.map(pt => pt.y));
+
+  const width = right - left;
+  const height = bottom - top;
+
+  return new DOMRect(left, top, width, height);
+}

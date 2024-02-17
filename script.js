@@ -8,6 +8,6 @@ const genieElements = /** @type {NodeListOf<HTMLElement>}  */ (
 
 genieElements.forEach((element) => {
   element.addEventListener("click", () => {
-    genieExit(element, target, { duration: 400 });
+    genieExit(element, target, { duration: 400, debug: true });
   });
 });

@@ -4,50 +4,57 @@ import {
   getCanvasFromImageData,
   createLinear,
   createQuadratic,
+  generateBoundingBox,
 } from "./utils.js";
 
 /**
  * Runs a genie exit animation for the given element
  * @param {HTMLElement} element
  * @param {HTMLElement} target
- * @param {{ duration: number }} options
+ * @param {{ duration: number, debug?: boolean }} options
  */
 export const genieExit = (element, target, options) => {
   //step 1 - Generate bounding box for the element and the target.
   const elementBounds = element.getBoundingClientRect();
   const targetBounds = target.getBoundingClientRect();
 
+
+  const targetLeft = new DOMPoint(targetBounds.left, targetBounds.bottom);
+  const targetRight = new DOMPoint(targetBounds.right, targetBounds.bottom);
+  const elementLeft = new DOMPoint(elementBounds.left, elementBounds.bottom);
+  const elementRight = new DOMPoint(elementBounds.right, elementBounds.bottom);
+  
+  const bb = generateBoundingBox(targetLeft, targetRight, elementLeft, elementRight);
+  console.log(bb);
+
   //We will need two containers, one for positioning & clipping, and one for applying the filter
   const container = document.createElement("div");
   const filterContainer = document.createElement("div");
 
   container.style.position = "absolute";
-  container.style.top = targetBounds.bottom + window.scrollY + "px";
-  container.style.left = Math.min(elementBounds.left, targetBounds.left) + "px";
-  container.style.right =
-    window.innerWidth -
-    Math.max(elementBounds.right, targetBounds.right) +
-    "px";
+  container.style.top = bb.top + window.scrollY + "px";
+  container.style.left = bb.left + "px";
+  container.style.right = window.innerWidth - bb.right + "px";
   container.style.bottom =
-    window.innerHeight - window.scrollY - elementBounds.bottom + "px";
+    window.innerHeight - window.scrollY - bb.bottom + "px";
   container.style.pointerEvents = "none";
   container.style.zIndex = "1000";
-  container.style.overflow = "hidden"
+  container.style.overflow = "hidden"; //Needed to clip the content
+  
+  if (options.debug) container.style.border = "1px solid red";
+ 
+
+  filterContainer.style.width = "100%";
+  filterContainer.style.height = "100%";
 
   element.style.position = "absolute";
   element.style.bottom = "0";
   element.style.left = "0";
 
-  //Add the element to the container
-  document.body.appendChild(container);
-
-  filterContainer.style.width = "100%";
-  filterContainer.style.height = "100%";
-
-  container.appendChild(filterContainer);
-
   //step 2 - Move the element to the container
   filterContainer.appendChild(element);
+  container.appendChild(filterContainer);
+  document.body.appendChild(container);
 
   const containerDimensions = container.getBoundingClientRect();
   const contentDimensions = element.getBoundingClientRect();
