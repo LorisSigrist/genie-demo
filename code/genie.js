@@ -51,6 +51,7 @@ export const genieExit = (element, target, options) => {
   element.style.position = "absolute";
   element.style.bottom = "0";
   element.style.left = elementBounds.left - bb.left + "px";
+  element.style.width = elementBounds.width + "px";
 
   //step 2 - Move the element to the container
   filterContainer.appendChild(element);
@@ -60,11 +61,11 @@ export const genieExit = (element, target, options) => {
   const containerDimensions = container.getBoundingClientRect();
   const contentDimensions = element.getBoundingClientRect();
 
-  const contentTop = contentDimensions.y - containerDimensions.y;
-  const contentTopLeft = contentDimensions.x - containerDimensions.x;
-  const contentTopRight = contentDimensions.width + contentDimensions.x - containerDimensions.x;
+  const contentTop = Math.round(contentDimensions.y - containerDimensions.y);
+  const contentTopLeft = Math.round(contentDimensions.x - containerDimensions.x);
+  const contentTopRight = Math.round(contentDimensions.width + contentDimensions.x - containerDimensions.x);
 
-  const depthMap = new ImageData(bb.width, bb.height);
+  const depthMap = new ImageData(containerDimensions.width, containerDimensions.height);
 
   //These functions define the left and right edges of the content (x position) as a function of y in the range [0, y0]
   const getLeft = createQuadratic(
@@ -129,14 +130,22 @@ export const genieExit = (element, target, options) => {
       depthMap.data[index + 2] = 0;
       depthMap.data[index + 3] = 255;
     }
+    console.log("y", y);
   }
 
   const filterId = ID();
 
   //create temporary canvas to generate data URL
-  const newCanvas = getCanvasFromImageData(depthMap);
+  const depthMapCanvas = getCanvasFromImageData(depthMap);
 
-  if (options.debug) document.body.appendChild(newCanvas);
+  if (options.debug) {
+    depthMapCanvas.style.position = "absolute";
+    depthMapCanvas.style.inset = "0";
+    depthMapCanvas.style.zIndex = "-10";
+    depthMapCanvas.style.pointerEvents = "none";
+    depthMapCanvas.style.opacity = "0.5";
+    container.appendChild(depthMapCanvas);
+  }
 
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("width", depthMap.width.toString());
@@ -156,7 +165,7 @@ export const genieExit = (element, target, options) => {
   // we need to set  the color - interpolation - filters to sRGB on all the filter elements
   feImage.setAttribute("color-interpolation-filters", "sRGB");
 
-  feImage.href.baseVal = newCanvas.toDataURL();
+  feImage.href.baseVal = depthMapCanvas.toDataURL();
 
   const feColorMatrix = document.createElementNS(SVG_NS, "feColorMatrix");
   feColorMatrix.setAttribute("in", feImage.getAttribute("result") ?? "");

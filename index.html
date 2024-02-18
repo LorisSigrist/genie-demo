@@ -7,59 +7,59 @@
     <meta name="author" content="Loris Sigrist">
     <title>Genie Effect Demo</title>
 
+    <link rel="icon" href="/assets/genie-lamp.png">
 
-    <script src="./script.js" type="module"></script>
+    <link rel="stylesheet" href="./code/styles.css">
+    <script src="./code/entry.js" type="module"></script>
 </head>
 
 
 <body>
-    <div id="target"
-        style="position: fixed; top: 50px; left: 100px; width: 100px; color: red; border-bottom: 1px solid red; text-align: center;">
-        Target
-    </div>
+    <header class="p-4 flex justify-between items-center border-divider border-b-1">
+        <span class="bold">Genie Demo</span>
+        <div id="target" class="flex items-center gap-2">
+            <img src="/assets/cart.svg" alt="shopping cart" class="s-6">
+            <span>Cart</span>
+        </div>
+        <span>
+            Created by <a href="https://www.sigrist.dev" class="bold">Loris Sigrist</a>
+        </span>
+    </header>
 
-    <div style="height: 300px"></div>
+    <main class="p-4 w-full max-w-md mx-auto">
 
-    <div style="display: flex; gap: 20px;">
+        <h1 class="mt-10">Items</h1>
+        <div class="flex flex-col gap-4"> 
+            <div class="genie rounded border-1 border-divider bg-white flex gap-2 shadow-sm p-4" tabindex="0">
+                <img src="/assets/genie-1.png" alt="" class="s-20 rounded">
+                <h1>Genie 1 </h1>
+            </div>
 
-    <div class="genie" style="
-        width: 300px; 
-        height: 300px; 
-        background-color: blue; 
-        display: grid;
-        place-items: center;
-    ">
-        <p style="font-weight: bold;">
-        <h1 style="color: white;">I'm a modal 1</h1>
-        </p>
-    </div>
+            <div class="genie rounded border-1 border-divider bg-white flex gap-2 shadow-sm p-4" tabindex="0">
+                <img src="/assets/genie-2.png" alt="" class="s-20 rounded">
+                <h1>Genie 2</h1>
+            </div>
 
-    <div class="genie" style="
-            width: 500px; 
-            height: 100px; 
-            background-color: blue; 
-            display: grid;
-            place-items: center;
-        ">
-        <p style="font-weight: bold;">
-        <h1 style="color: white;">I'm a modal 2</h1>
-        </p>
-    </div>
+            <div class="genie rounded border-1 border-divider bg-white flex gap-2 shadow-sm p-4" tabindex="0">
+                <img src="/assets/genie-3.png" alt="" class="s-20 rounded">
+                <h1>Genie 3</h1>
+            </div>
+            <div class="genie rounded border-1 border-divider bg-white flex gap-2 shadow-sm p-4" tabindex="0">
+                <img src="/assets/genie-1.png" alt="" class="s-20 rounded">
+                <h1>Genie 1 </h1>
+            </div>
 
-    <div class="genie" style="
-        width: 200px; 
-        height: 400px; 
-        background-color: blue; 
-        display: grid;
-        place-items: center;
-        opacity: 0.7;
-        ">
-        <p style="font-weight: bold;">
-        <h1 style="color: white;">I'm a modal 3</h1>
-        </p>
-    </div>
+            <div class="genie rounded border-1 border-divider bg-white flex gap-2 shadow-sm p-4" tabindex="0">
+                <img src="/assets/genie-2.png" alt="" class="s-20 rounded">
+                <h1>Genie 2</h1>
+            </div>
 
-</div>
+            <div class="genie rounded border-1 border-divider bg-white flex gap-2 shadow-sm p-4" tabindex="0">
+                <img src="/assets/genie-3.png" alt="" class="s-20 rounded">
+                <h1>Genie 3</h1>
+            </div>
+        </div>
+    </main>
 </body>
 
 </html>
