@@ -62,6 +62,11 @@ html, body {
     height: 5rem;
 }
 
+.s-40 {
+    width: 10rem;
+    height: 10rem;
+}
+
 .w-full {
     width: 100%;
 }
