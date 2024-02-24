@@ -10,8 +10,4 @@ genieElements.forEach((element) => {
   element.addEventListener("click", () => {
     genieExit(element, target, { duration: 400 });
   });
-
-  element.addEventListener("select", () => {
-    genieExit(element, target, { duration: 400 });
-  });
 });

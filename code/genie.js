@@ -14,6 +14,14 @@ import {
  * @param {{ duration: number, debug?: boolean }} options
  */
 export const genieExit = (element, target, options) => {
+  //the animation has two phases:
+  // 1. The element is squeezed into the flight path
+  // 2. The element is moved to the target
+
+  const phase1Duration = options.duration * 0.3;
+  const phase2Duration = options.duration * 0.7;
+
+
   //step 1 - Generate bounding box for the element and the target.
   const elementBounds = element.getBoundingClientRect();
   const targetBounds = target.getBoundingClientRect();
@@ -62,6 +70,7 @@ export const genieExit = (element, target, options) => {
   const contentDimensions = element.getBoundingClientRect();
 
   const contentTop = Math.round(contentDimensions.y - containerDimensions.y);
+  const contentBottom = Math.round(containerDimensions.height);
   const contentTopLeft = Math.round(contentDimensions.x - containerDimensions.x);
   const contentTopRight = Math.round(contentDimensions.width + contentDimensions.x - containerDimensions.x);
 
@@ -70,14 +79,14 @@ export const genieExit = (element, target, options) => {
   //These functions define the left and right edges of the content (x position) as a function of y in the range [0, y0]
   const getLeft = createQuadratic(
     contentTopLeft,
-    contentTop,
+    contentBottom,
     targetLeft.x - containerDimensions.x,
     0
   );
 
   const getRight = createQuadratic(
     contentTopRight,
-    contentTop,
+    contentBottom,
     targetRight.x - containerDimensions.x,
     0
   );
@@ -103,7 +112,7 @@ export const genieExit = (element, target, options) => {
   const displacementScale =
     Math.max(maxDisplacementRight, maxDisplacementLeft) * 1.15;
 
-  for (let y = 0; y < contentTop; y++) {
+  for (let y = 0; y <  depthMap.height; y++) {
     const left = getLeft(y);
     const right = getRight(y);
     const getPercentage = createLinear(0, left, 1, right);
@@ -119,18 +128,6 @@ export const genieExit = (element, target, options) => {
       depthMap.data[index + 2] = 0;
       depthMap.data[index + 3] = 255;
     }
-  }
-
-  //Fill the rest of the image with black
-  for (let y = contentTop; y < depthMap.height; y++) {
-    for (let x = 0; x < depthMap.width; x++) {
-      const index = (y * depthMap.width + x) * 4;
-      depthMap.data[index] = zeroValue;
-      depthMap.data[index + 1] = 0;
-      depthMap.data[index + 2] = 0;
-      depthMap.data[index + 3] = 255;
-    }
-    console.log("y", y);
   }
 
   const filterId = ID();
@@ -211,8 +208,10 @@ export const genieExit = (element, target, options) => {
     feColorMatrix.getAttribute("result") ?? ""
   );
 
+  const finalScaleValue = String(-displacementScale * 2);
+
   //Because the displacement is calculated as (Sample(x) * scale), where Sample(x) is between -0.5 and 0.5, we need the scale to be twice the maximum displacement
-  feDisplacementMap.setAttribute("scale", String(-displacementScale * 2));
+  feDisplacementMap.setAttribute("scale", "0");
 
   //set color space to linearRGB
   feDisplacementMap.setAttribute("color-interpolation-filters", "sRGB");
@@ -225,6 +224,18 @@ export const genieExit = (element, target, options) => {
   filter.appendChild(feImage);
   filter.appendChild(feColorMatrix);
   filter.appendChild(feDisplacementMap);
+
+  //Animate the feDisplacementMap's scale property from 0 to the maximum displacement
+  const animateElement = document.createElementNS(SVG_NS, "animate");
+  animateElement.setAttribute("attributeName", "scale");
+  animateElement.setAttribute("from", "0");
+  animateElement.setAttribute("to", finalScaleValue);
+  animateElement.setAttribute("dur", phase1Duration + "ms");
+  animateElement.setAttribute("fill", "freeze");
+  feDisplacementMap.appendChild(animateElement);
+
+
+  console.log("Filter", filter);
 
   //append the svg to the container, but make it invisible
   document.body.appendChild(svg);
@@ -250,9 +261,10 @@ export const genieExit = (element, target, options) => {
       },
     ],
     {
-      duration: options.duration,
+      duration: phase2Duration,
       easing: "ease-in",
       fill: "forwards",
+      delay: phase1Duration
     }
   );
 
