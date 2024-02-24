@@ -234,9 +234,6 @@ export const genieExit = (element, target, options) => {
   animateElement.setAttribute("fill", "freeze");
   feDisplacementMap.appendChild(animateElement);
 
-
-  console.log("Filter", filter);
-
   //append the svg to the container, but make it invisible
   document.body.appendChild(svg);
   svg.style.position = "fixed";
