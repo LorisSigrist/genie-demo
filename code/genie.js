@@ -21,7 +21,6 @@ export const genieExit = (element, target, options) => {
   const phase1Duration = options.duration * 0.3;
   const phase2Duration = options.duration * 0.7;
 
-
   //step 1 - Generate bounding box for the element and the target.
   const elementBounds = element.getBoundingClientRect();
   const targetBounds = target.getBoundingClientRect();
@@ -71,10 +70,17 @@ export const genieExit = (element, target, options) => {
 
   const contentTop = Math.round(contentDimensions.y - containerDimensions.y);
   const contentBottom = Math.round(containerDimensions.height);
-  const contentTopLeft = Math.round(contentDimensions.x - containerDimensions.x);
-  const contentTopRight = Math.round(contentDimensions.width + contentDimensions.x - containerDimensions.x);
+  const contentTopLeft = Math.round(
+    contentDimensions.x - containerDimensions.x
+  );
+  const contentTopRight = Math.round(
+    contentDimensions.width + contentDimensions.x - containerDimensions.x
+  );
 
-  const depthMap = new ImageData(containerDimensions.width, containerDimensions.height);
+  const depthMap = new ImageData(
+    containerDimensions.width,
+    containerDimensions.height
+  );
 
   //These functions define the left and right edges of the content (x position) as a function of y in the range [0, y0]
   const getLeft = createQuadratic(
@@ -112,7 +118,7 @@ export const genieExit = (element, target, options) => {
   const displacementScale =
     Math.max(maxDisplacementRight, maxDisplacementLeft) * 1.15;
 
-  for (let y = 0; y <  depthMap.height; y++) {
+  for (let y = 0; y < depthMap.height; y++) {
     const left = getLeft(y);
     const right = getRight(y);
     const getPercentage = createLinear(0, left, 1, right);
@@ -120,7 +126,7 @@ export const genieExit = (element, target, options) => {
     for (let x = 0; x < depthMap.width; x++) {
       const percentage = getPercentage(x);
       const offsetPx = x - percentage * contentDimensions.width;
-      const val = ((offsetPx / displacementScale) * 255) + zeroValue;
+      const val = (offsetPx / displacementScale) * 255 + zeroValue;
 
       const index = (y * depthMap.width + x) * 4;
       depthMap.data[index] = val;
@@ -226,6 +232,7 @@ export const genieExit = (element, target, options) => {
   filter.appendChild(feDisplacementMap);
 
   //Animate the feDisplacementMap's scale property from 0 to the maximum displacement
+  
   const animateElement = document.createElementNS(SVG_NS, "animate");
   animateElement.setAttribute("attributeName", "scale");
   animateElement.setAttribute("from", "0");
@@ -233,7 +240,7 @@ export const genieExit = (element, target, options) => {
   animateElement.setAttribute("dur", phase1Duration + "ms");
   animateElement.setAttribute("fill", "freeze");
   feDisplacementMap.appendChild(animateElement);
-
+  
   //append the svg to the container, but make it invisible
   document.body.appendChild(svg);
   svg.style.position = "fixed";
@@ -247,27 +254,87 @@ export const genieExit = (element, target, options) => {
   filterContainer.style.filter = `url(#${filterId})`;
 
   //Use the webAnimations API to animate the content's bottom property from zero to 100%
-  const animation = element.animate(
-    [
-      {
-        transform: "translateY(0)",
-      },
-      {
-        transform: `translateY(-${containerDimensions.height}px)`,
-        opacity: 0,
-      },
-    ],
-    {
-      duration: phase2Duration,
-      easing: "ease-in",
-      fill: "forwards",
-      delay: phase1Duration
-    }
-  );
 
-  //When the animation is complete, remove the container and the svg
-  animation.onfinish = () => {
+  const cleanUp = () => {
     container.remove();
     svg.remove();
   };
+
+  const animate = isSafari() ? animateWithJS : animateWithWebAnimations;
+
+  sleep(phase1Duration)
+    // There currently is a safari bug where filters aren't applied to animated elements
+    // so we need to animate the exit step by step manually
+    .then(() => animate(element, { duration: phase2Duration, distance: containerDimensions.height }))
+    .then(() => cleanUp());
 };
+
+function animateWithWebAnimations(element, { duration, distance }) {
+  return new Promise((resolve) => {
+    const animation = element.animate(
+      [
+        {
+          transform: "translateY(0)",
+        },
+        {
+          transform: `translateY(-${distance}px)`,
+        },
+      ],
+      {
+        duration,
+        easing: "ease-in",
+        fill: "forwards",
+      }
+    );
+
+    animation.onfinish = resolve;
+  });
+}
+
+/**
+ * Manually animate the element using JS instead of the WebAnimations API
+ *
+ * @param {HTMLElement} element
+ * @param {{ duration: number, distance: number }} options
+ * @returns {Promise<void>} A promise that resolves when the animation is complete
+ */
+function animateWithJS(element, { duration, distance }) {
+  return new Promise((resolve) => {
+    const start = performance.now();
+    const end = start + duration;
+
+    element.style.transform = "translateY(0)";
+
+    function step() {
+      const now = performance.now();
+
+      const progress = (now - start) / duration;
+      const value = distance * progress;
+      element.style.transform = `translateY(-${value}px)`;
+
+      if (now < end) {
+        requestAnimationFrame(step);
+      } else {
+        resolve();
+      }
+    }
+
+    requestAnimationFrame(step);
+  });
+}
+
+/**
+ * Sleep for a given number of milliseconds
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+
+function isSafari() {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
