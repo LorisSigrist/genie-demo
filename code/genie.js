@@ -265,6 +265,7 @@ export const genieExit = (element, target, options) => {
   sleep(phase1Duration)
     // There currently is a safari bug where filters aren't applied to animated elements
     // so we need to animate the exit step by step manually
+    // https://bugs.webkit.org/show_bug.cgi?id=246106
     .then(() => animate(element, { duration: phase2Duration, distance: containerDimensions.height }))
     .then(() => cleanUp());
 };
